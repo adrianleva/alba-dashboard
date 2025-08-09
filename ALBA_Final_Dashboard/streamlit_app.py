@@ -35,77 +35,82 @@ st.markdown(
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
 
-      /* Force light look even if host prefers dark */
-      :root {{
-        color-scheme: light !important;
-      }}
+      :root {{ color-scheme: light !important; }}
 
       html, body, [data-testid="stAppViewContainer"] {{
-        background: #FFFFFF !important;
-        color: {BRAND_TEXT} !important;
-        font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
+        background:#FFFFFF !important;
+        color:{BRAND_TEXT} !important;
+        font-family:Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
       }}
       [data-testid="stHeader"] {{ background:#FFFFFF !important; border-bottom:none !important; }}
-      h1, h2, h3, h4, h5, h6, label, .stMarkdown p, .stCaption {{ color: {BRAND_TEXT} !important; }}
+
+      /* Headings */
+      h1, h2, h3, h4, h5, h6, label, .stMarkdown p, .stCaption {{ color:{BRAND_TEXT} !important; }}
       .brand-title {{ color:{BRAND_TEXT}; font-weight:800; font-size:30px; margin:2px 0 0; }}
       .brand-bar {{ height:5px; background:{BRAND_BLUE}; margin:8px 0 16px; border-radius:8px; }}
       .section-title {{ color:{BRAND_BLUE}; font-weight:800; margin:12px 0 8px; font-size:18px; }}
+      .field-label {{ color:{BRAND_BLUE}; font-weight:700; margin:6px 0 4px; }}
+
+      /* Cards (KPI) */
       .card {{
-        border:1px solid {CARD_BORDER}; background:{CARD_BG};
+        border:1px solid {CARD_BORDER}; background:#fff;
         border-radius:16px; padding:16px 18px; box-shadow:0 6px 20px rgba(30,75,135,0.06);
+        min-height:110px;
       }}
       .kpi-label {{ font-size:13px; color:#6B7280; margin-bottom:4px; }}
-      .kpi-value {{ font-size:32px; font-weight:800; line-height:1.1; }}
+      .kpi-value {{ font-size:34px; font-weight:800; line-height:1.1; }}
       .good {{ color:#1E7D4F }} .bad {{ color:#B00020 }}
+
+      /* P&L table */
       table.pl {{ width:100%; border-collapse:collapse; border:1px solid {CARD_BORDER}; border-radius:14px; overflow:hidden; background:#fff; }}
       table.pl th, table.pl td {{ padding:10px 12px; border-bottom:1px solid #EEF2F8; text-align:left }}
       table.pl th {{ background:{CARD_SOFT}; color:{BRAND_TEXT}; font-weight:700 }}
       table.pl tr:last-child td {{ border-bottom:none }}
       .muted {{ color:#6B7280; font-size:12px }}
 
-      /* Blue radios with white interior */
-      input[type="radio"] {{ accent-color:{BRAND_BLUE} !important; background-color:#FFFFFF !important; }}
+      /* Radios */
+      input[type="radio"] {{ accent-color:{BRAND_BLUE} !important; background:#FFFFFF !important; }}
+      div[role="radiogroup"] * {{ color:{BRAND_TEXT} !important; }}
 
-      /* Primary/Download buttons → ALBA blue */
-      .stButton > button, .stDownloadButton > button {{
-        background:{BRAND_BLUE} !important; color:#fff !important; border-color:{BRAND_BLUE} !important;
-        font-weight:700; border-radius:10px;
-      }}
+      /* INPUT SIZING: keep inputs compact so they don't span full width */
+      .stTextInput, .stNumberInput {{ max-width: 320px !important; }}
 
-      /* Inputs — large, white, square, Poppins, no red */
       /* Newer Streamlit input core */
       div[data-baseweb="input"] {{
         background:#FFFFFF !important;
-        color:{BRAND_TEXT} !important;
         border:2px solid {BRAND_BLUE} !important;
         border-radius:12px !important;
       }}
       div[data-baseweb="input"] input {{
         font-family:Poppins, sans-serif !important;
-        font-size:24px !important;
-        font-weight:700 !important;
-        color:{BRAND_TEXT} !important;
-        height:60px !important;
-        padding:10px 12px !important;
-        text-align:right !important;
-        background:#FFFFFF !important;
-        box-shadow:none !important;
+        font-size:22px !important; font-weight:700 !important; color:{BRAND_TEXT} !important;
+        height:56px !important; padding:10px 12px !important; text-align:right !important;
+        background:#FFFFFF !important; box-shadow:none !important;
       }}
-      /* Older wrappers (covers some hosts) */
+
+      /* Legacy wrappers (cover some hosts) */
       .stTextInput>div>div>input, .stNumberInput>div>div>input {{
         background:#FFFFFF !important; color:{BRAND_TEXT} !important;
-        font-family:Poppins, sans-serif !important; font-size:24px !important; font-weight:700 !important;
-        height:60px !important; padding:10px 12px !important; text-align:right !important;
+        font-family:Poppins, sans-serif !important; font-size:22px !important; font-weight:700 !important;
+        height:56px !important; padding:10px 12px !important; text-align:right !important;
         border:2px solid {BRAND_BLUE} !important; border-radius:12px !important; box-shadow:none !important;
       }}
-      /* Kill validation red state */
       input:invalid {{ border-color:{BRAND_BLUE} !important; box-shadow:none !important; }}
 
-      /* Make the “Primary input mode” text readable and blue */
-      .field-label {{ color:{BRAND_BLUE} !important; font-weight:700 !important; margin:6px 0 4px; }}
+      /* Unit chips (prefix/suffix) that visually attach to inputs */
+      .chip {{
+        display:flex; align-items:center; justify-content:center;
+        height:56px; padding:0 10px; background:#F6FAFF; color:{BRAND_TEXT};
+        border:2px solid {BRAND_BLUE}; font-weight:700; font-family:Poppins, sans-serif;
+      }}
+      .chip-left  {{ border-right:0; border-radius:12px 0 0 12px; }}
+      .chip-right {{ border-left:0;  border-radius:0 12px 12px 0; }}
 
-      /* Radio text readable */
-      div[role="radiogroup"] * {{ color:{BRAND_TEXT} !important; }}
+      /* Buttons */
+      .stButton > button, .stDownloadButton > button {{
+        background:{BRAND_BLUE} !important; color:#fff !important; border-color:{BRAND_BLUE} !important;
+        font-weight:700; border-radius:10px; height:48px;
+      }}
     </style>
     """,
     unsafe_allow_html=True,
