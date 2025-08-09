@@ -30,6 +30,9 @@ CARD_BG = "#FFFFFF"
 CARD_SOFT = "#F6FAFF"
 CARD_BORDER = "#E5ECF6"
 
+# ──────────────────────────────────────────────────────────────────────────────
+# REPLACE FROM HERE (first changed line) DOWN TO THE END OF FILE
+# ──────────────────────────────────────────────────────────────────────────────
 st.markdown(
     f"""
     <style>
@@ -38,22 +41,22 @@ st.markdown(
       :root {{ color-scheme: light !important; }}
 
       html, body, [data-testid="stAppViewContainer"] {{
-        background:#FFFFFF !important;
-        color:{BRAND_TEXT} !important;
-        font-family:Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
+        background: #FFFFFF !important;
+        color: {BRAND_TEXT} !important;
+        font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
       }}
       [data-testid="stHeader"] {{ background:#FFFFFF !important; border-bottom:none !important; }}
 
       /* Headings */
-      h1, h2, h3, h4, h5, h6, label, .stMarkdown p, .stCaption {{ color:{BRAND_TEXT} !important; }}
+      h1, h2, h3, h4, h5, h6, label, .stMarkdown p, .stCaption {{ color: {BRAND_TEXT} !important; }}
       .brand-title {{ color:{BRAND_TEXT}; font-weight:800; font-size:30px; margin:2px 0 0; }}
       .brand-bar {{ height:5px; background:{BRAND_BLUE}; margin:8px 0 16px; border-radius:8px; }}
       .section-title {{ color:{BRAND_BLUE}; font-weight:800; margin:12px 0 8px; font-size:18px; }}
       .field-label {{ color:{BRAND_BLUE}; font-weight:700; margin:6px 0 4px; }}
 
-      /* Cards (KPI) */
+      /* KPI cards */
       .card {{
-        border:1px solid {CARD_BORDER}; background:#fff;
+        border:1px solid {CARD_BORDER}; background:{CARD_BG};
         border-radius:16px; padding:16px 18px; box-shadow:0 6px 20px rgba(30,75,135,0.06);
         min-height:110px;
       }}
@@ -72,7 +75,7 @@ st.markdown(
       input[type="radio"] {{ accent-color:{BRAND_BLUE} !important; background:#FFFFFF !important; }}
       div[role="radiogroup"] * {{ color:{BRAND_TEXT} !important; }}
 
-      /* INPUT SIZING: keep inputs compact so they don't span full width */
+      /* Keep inputs compact (no full-width stretch) */
       .stTextInput, .stNumberInput {{ max-width: 320px !important; }}
 
       /* Newer Streamlit input core */
@@ -88,7 +91,7 @@ st.markdown(
         background:#FFFFFF !important; box-shadow:none !important;
       }}
 
-      /* Legacy wrappers (cover some hosts) */
+      /* Legacy wrappers */
       .stTextInput>div>div>input, .stNumberInput>div>div>input {{
         background:#FFFFFF !important; color:{BRAND_TEXT} !important;
         font-family:Poppins, sans-serif !important; font-size:22px !important; font-weight:700 !important;
@@ -97,7 +100,7 @@ st.markdown(
       }}
       input:invalid {{ border-color:{BRAND_BLUE} !important; box-shadow:none !important; }}
 
-      /* Unit chips (prefix/suffix) that visually attach to inputs */
+      /* Unit chips that attach to inputs so users can't delete the symbols */
       .chip {{
         display:flex; align-items:center; justify-content:center;
         height:56px; padding:0 10px; background:#F6FAFF; color:{BRAND_TEXT};
@@ -117,10 +120,15 @@ st.markdown(
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Helpers
+# Helpers (ADDED: money_input for C$ and unit chips)
 # ──────────────────────────────────────────────────────────────────────────────
+def cad(x: float) -> str:
+    x = float(x)
+    return f"-C${abs(x):,.2f}" if x < 0 else f"C${x:,.2f}"
+
+HST_RATE = 0.13  # fixed 13% (Ontario)
+
 def money_input(label: str, value: float, key: str, step: float = 1.0, suffix: str | None = None) -> float:
-    """Renders a compact input with a left 'C$' chip and optional right unit chip."""
     st.markdown(f"<div class='field-label'>{label}</div>", unsafe_allow_html=True)
     col_l, col_mid, col_r = st.columns([0.18, 0.64, 0.18], vertical_alignment="center")
     with col_l:
@@ -133,11 +141,6 @@ def money_input(label: str, value: float, key: str, step: float = 1.0, suffix: s
         else:
             st.markdown("<div></div>", unsafe_allow_html=True)
     return float(val)
-def cad(x: float) -> str:
-    x = float(x)
-    return f"-C${abs(x):,.2f}" if x < 0 else f"C${x:,.2f}"
-
-HST_RATE = 0.13  # fixed 13% (Ontario)
 
 def compute_metrics(
     units: int,
@@ -208,7 +211,7 @@ def margin_from_fee(
     return 0.0 if a_rev_sub == 0 else (a_profit / a_rev_sub) * 100.0
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Header (logo + title) — robust lookup
+# Header (logo + title) — robust lookup (CHANGED)
 # ──────────────────────────────────────────────────────────────────────────────
 from pathlib import Path
 BASE = Path(__file__).resolve().parent
@@ -216,7 +219,8 @@ logo_candidates = [
     BASE / "assets" / "logo.png",
     BASE / "assets" / "Logo.png",
     BASE / "assets" / "download.png",
-    Path("assets/logo.png"), Path("assets/download.png"),
+    Path("assets/logo.png"),
+    Path("assets/download.png"),
 ]
 logo_path = next((str(p) for p in logo_candidates if p.exists()), None)
 
@@ -229,6 +233,7 @@ with rcol:
         st.image(logo_path, use_column_width=True)
     else:
         st.caption("Add logo at assets/logo.png")
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Inputs
 # ──────────────────────────────────────────────────────────────────────────────
@@ -242,7 +247,6 @@ with c2:
 
 units = st.number_input("Residential units", min_value=0, step=1, value=100)
 
-# Make this readable (blue) without changing your layout logic
 st.markdown("<div class='field-label'>Primary input mode</div>", unsafe_allow_html=True)
 mode = st.radio(
     "Choose what you enter:",
@@ -255,21 +259,28 @@ if "Target Margin" in mode:
     target_margin = st.number_input("Target profit margin (%)", min_value=0.0, max_value=95.0, step=0.5, format="%.2f", value=20.0)
     fee_input = None
 else:
-fee_input = money_input("Management fee (pre-tax)", 75.0, key="fee_input", step=5.0, suffix="/unit/month")
+    # CHANGED: fee uses money_input with chips (C$ and /unit/month)
+    fee_input = money_input("Management fee (pre-tax)", 75.0, key="fee_input", step=5.0, suffix="/unit/month")
+    target_margin = None
+
 st.markdown("**Manager & Overhead (annual)**")
 g1, g2 = st.columns(2)
 with g1:
-    manager_salary = st.number_input("Manager salary (annual)", min_value=0.0, step=1000.0, format="%.2f", value=90000.0)
+    # CHANGED to money_input
+    manager_salary = money_input("Manager salary (annual)", 90000.0, key="mgr_salary", step=1000.0, suffix="/year")
 with g2:
     manager_days = st.number_input("Manager days on-site per week (1–5)", min_value=1, max_value=5, step=1, value=2)
 
 h1, h2 = st.columns(2)
 with h1:
-    accounting = st.number_input("Accounting fees (annual)", min_value=0.0, step=500.0, format="%.2f", value=12000.0)
+    # CHANGED to money_input
+    accounting = money_input("Accounting fees (annual)", 12000.0, key="acct_fees", step=500.0, suffix="/year")
 with h2:
-    head_office = st.number_input("Head office team time (annual)", min_value=0.0, step=500.0, format="%.2f", value=18000.0)
+    # CHANGED to money_input
+    head_office = money_input("Head office team time (annual)", 18000.0, key="ho_time", step=500.0, suffix="/year")
 
-fixed_overhead = st.number_input("Fixed overhead (annual)", min_value=0.0, step=500.0, format="%.2f", value=30000.0)
+# CHANGED to money_input
+fixed_overhead = money_input("Fixed overhead (annual)", 30000.0, key="fixed_oh", step=500.0, suffix="/year")
 
 st.markdown("**Projection Controls**")
 proj1, proj2 = st.columns(2)
@@ -403,7 +414,7 @@ if M["a_profit"] < 0:
     st.error("Negative margin detected. Increase fee or reduce costs.")
 
 # ──────────────────────────────────────────────────────────────────────────────
-# PDF Export (ReportLab) – one page with logo, KPIs, table, and charts
+# PDF Export (ReportLab) – one page with logo, KPIs, table, and charts (TIGHTER LAYOUT)
 # ──────────────────────────────────────────────────────────────────────────────
 def fig_to_png_bytes(fig) -> bytes:
     # Requires kaleido
@@ -421,7 +432,7 @@ def build_pdf() -> bytes:
     y = H - margin
 
     # Header with logo + title
-    if os.path.exists(logo_path):
+    if logo_path and os.path.exists(logo_path):
         try:
             c.drawImage(ImageReader(logo_path), margin, y-40, width=120, height=40, preserveAspectRatio=True, mask='auto')
         except Exception:
@@ -453,39 +464,46 @@ def build_pdf() -> bytes:
     c.drawString(margin+10+box_w+10, y-88, f"{margin:.2f}%")
     c.drawString(margin+10+2*(box_w+10), y-88, f"{cad(M['m_profit'])} / {cad(M['a_profit'])}")
 
-    # P&L table (compact)
+    # P&L table (aligned)
     c.setFont("Helvetica-Bold", 11); c.setFillColor(colors.HexColor(BRAND_BLUE))
     c.drawString(margin, y-140, "Profit & Loss (Monthly vs Annual)")
     c.setFont("Helvetica", 9); c.setFillColor(colors.HexColor(BRAND_TEXT))
 
-    ty = y-155
-    col2 = margin + 260
-    col3 = margin + 420
-    c.setFont("Helvetica-Bold", 9)
-    c.drawString(margin, ty, "Line item"); c.drawString(col2, ty, "Monthly"); c.drawString(col3, ty, "Annual")
-    c.setStrokeColor(colors.HexColor(CARD_BORDER))
-    c.line(margin, ty-2, W-margin, ty-2)
-    c.setFont("Helvetica", 9)
+    ty = y-158
+    col1 = margin
+    col2 = margin + 300  # Monthly
+    col3 = margin + 450  # Annual
 
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(col1, ty, "Line item")
+    c.drawString(col2, ty, "Monthly")
+    c.drawString(col3, ty, "Annual")
+
+    c.setStrokeColor(colors.HexColor(CARD_BORDER))
+    c.line(margin, ty-2, W - margin, ty-2)
+    c.setFont("Helvetica", 9)
     ty -= 14
+
     for name, mv, av in rows:
         mv_str = cad(mv) if mv != "" else ""
         av_str = cad(av) if av != "" else ""
-        c.drawString(margin, ty, name)
-        c.drawRightString(col2+120, ty, mv_str)
-        c.drawRightString(W-margin, ty, av_str)
+        c.drawString(col1, ty, name)
+        c.drawRightString(col2 + 100, ty, mv_str)
+        c.drawRightString(col3 + 100, ty, av_str)
         ty -= 14
-        if ty < 220:  # stop before charts
+        if ty < 220:
             break
 
-    # Charts row
-    chart_h = 180; chart_w = (W - 2*margin - 10) / 2
+    # Charts row (aligned under table)
+    chart_h = 170
+    chart_w = (W - 2*margin - 12) / 2
+    y_charts = 80
     try:
-        c.drawImage(ImageReader(BytesIO(pie_png)), margin, 80, width=chart_w, height=chart_h, preserveAspectRatio=True, mask='auto')
+        c.drawImage(ImageReader(BytesIO(pie_png)), margin, y_charts, width=chart_w, height=chart_h, preserveAspectRatio=True, mask='auto')
     except Exception:
         pass
     try:
-        c.drawImage(ImageReader(BytesIO(bar_png)), margin + chart_w + 10, 80, width=chart_w, height=chart_h, preserveAspectRatio=True, mask='auto')
+        c.drawImage(ImageReader(BytesIO(bar_png)), margin + chart_w + 12, y_charts, width=chart_w, height=chart_h, preserveAspectRatio=True, mask='auto')
     except Exception:
         pass
 
