@@ -56,42 +56,26 @@ st.markdown(
       table.pl th {{ background:{CARD_SOFT}; color:{BRAND_TEXT}; font-weight:700 }}
       table.pl tr:last-child td {{ border-bottom:none }}
       .muted {{ color:#6B7280; font-size:12px }}
-
-      /* Blue radios with white interior */
-      input[type="radio"] {{ accent-color:{BRAND_BLUE} !important; background-color:#FFFFFF !important; }}
-
-      /* Primary/Download buttons → ALBA blue */
-      .stButton > button, .stDownloadButton > button {{
-        background:{BRAND_BLUE} !important; color:#fff !important; border-color:{BRAND_BLUE} !important;
-        font-weight:700; border-radius:10px;
-      }}
-
-      /* Inputs on white */
-      .stTextInput>div>div>input, .stNumberInput>div>div>input {{
-        background:#fff !important; color:{BRAND_TEXT} !important;
-      }}
-      .field-label {{
-    color: #1E4B87;
-    font-weight: 700;
-    margin: 6px 0 4px;
+/* Blue radios with white interior */
+input[type="radio"] {{
+  accent-color: {BRAND_BLUE} !important;
+  background: #FFFFFF !important;
 }}
-/* Make all Streamlit widget labels blue & bold (fixes white labels) */
+
+/* Make ALL text inside the radio group readable + bold label */
+div[role="radiogroup"] * {{
+  color: {BRAND_TEXT} !important;
+}}
 label[data-testid="stWidgetLabel"] {{
   color: {BRAND_BLUE} !important;
   font-weight: 700 !important;
 }}
 
-/* Our custom mini label used above "Primary input mode" */
+/* Mini heading used above the radio */
 .field-label {{
   color: {BRAND_BLUE} !important;
   font-weight: 700 !important;
   margin: 6px 0 4px;
-}}
-
-/* Make the radio option text dark and readable */
-div[role="radiogroup"] label span {{
-  color: {BRAND_TEXT} !important;
-  font-weight: 600 !important;
 }}
     </style>
     """,
