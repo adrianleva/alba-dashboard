@@ -1,19 +1,21 @@
-# streamlit_app.py — ALBA Pricing & Profit Planner (final)
-# - Poppins font, ALBA blue headings, soft card UI
+# streamlit_app.py — ALBA Pricing & Profit Planner (clean UI rewrite)
+# - White, square-ish inputs with big text + units in labels
 # - Mode toggle: Target Margin → Fee OR Fee → Margin
 # - Manager salary prorated by 1–5 days/week
 # - HST fixed at 13% (Ontario)
 # - Big KPIs, readable charts, real PDF export (ReportLab + Plotly/Kaleido)
+# - Logo auto-loads from assets/logo.png (or assets/download.png)
 
 from __future__ import annotations
 from datetime import datetime
 from io import BytesIO
+from pathlib import Path
 import os
 
 import streamlit as st
 import plotly.graph_objects as go
 
-# PDF bits
+# PDF
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
@@ -35,48 +37,46 @@ st.markdown(
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
       html, body, [data-testid="stAppViewContainer"] {{
-        background: #FFFFFF !important;
-        color: {BRAND_TEXT} !important;
-        font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
+        background:#FFFFFF !important; color:{BRAND_TEXT} !important;
+        font-family:Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
       }}
       [data-testid="stHeader"] {{ background:#FFFFFF !important; border-bottom:none !important; }}
-      h1, h2, h3, h4, h5, h6, label, .stMarkdown p, .stCaption {{ color: {BRAND_TEXT} !important; }}
       .brand-title {{ color:{BRAND_TEXT}; font-weight:800; font-size:30px; margin:2px 0 0; }}
       .brand-bar {{ height:5px; background:{BRAND_BLUE}; margin:8px 0 16px; border-radius:8px; }}
       .section-title {{ color:{BRAND_BLUE}; font-weight:800; margin:12px 0 8px; font-size:18px; }}
       .card {{
-        border:1px solid {CARD_BORDER}; background:{CARD_BG};
+        border:1.5px solid {CARD_BORDER}; background:{CARD_BG};
         border-radius:16px; padding:16px 18px; box-shadow:0 6px 20px rgba(30,75,135,0.06);
+        min-height:110px;
       }}
       .kpi-label {{ font-size:13px; color:#6B7280; margin-bottom:4px; }}
-      .kpi-value {{ font-size:32px; font-weight:800; line-height:1.1; }}
+      .kpi-value {{ font-size:34px; font-weight:800; line-height:1.1; }}
       .good {{ color:#1E7D4F }} .bad {{ color:#B00020 }}
       table.pl {{ width:100%; border-collapse:collapse; border:1px solid {CARD_BORDER}; border-radius:14px; overflow:hidden; background:#fff; }}
       table.pl th, table.pl td {{ padding:10px 12px; border-bottom:1px solid #EEF2F8; text-align:left }}
       table.pl th {{ background:{CARD_SOFT}; color:{BRAND_TEXT}; font-weight:700 }}
       table.pl tr:last-child td {{ border-bottom:none }}
       .muted {{ color:#6B7280; font-size:12px }}
-/* Blue radios with white interior */
-input[type="radio"] {{
-  accent-color: {BRAND_BLUE} !important;
-  background: #FFFFFF !important;
-}}
 
-/* Make ALL text inside the radio group readable + bold label */
-div[role="radiogroup"] * {{
-  color: {BRAND_TEXT} !important;
-}}
-label[data-testid="stWidgetLabel"] {{
-  color: {BRAND_BLUE} !important;
-  font-weight: 700 !important;
-}}
+      /* Inputs — white, square-ish, big text, limited width */
+      .stTextInput, .stNumberInput {{ max-width: 300px !important; display:inline-block; margin-right:12px; }}
+      .stTextInput > div > div, .stNumberInput > div > div {{
+        background:#FFFFFF !important; border:1.5px solid {CARD_BORDER} !important;
+        border-radius:16px !important; height:64px !important;
+      }}
+      .stTextInput input, .stNumberInput input {{
+        font-size:20px !important; font-weight:700 !important; padding:10px 12px !important; color:{BRAND_TEXT} !important;
+      }}
+      /* Blue radios with readable text */
+      input[type="radio"] {{ accent-color:{BRAND_BLUE} !important; background:#FFFFFF !important; }}
+      div[role="radiogroup"] * {{ color:{BRAND_TEXT} !important; }}
+      .field-label {{ color:{BRAND_BLUE}; font-weight:700; margin:6px 0 4px; }}
 
-/* Mini heading used above the radio */
-.field-label {{
-  color: {BRAND_BLUE} !important;
-  font-weight: 700 !important;
-  margin: 6px 0 4px;
-}}
+      /* Primary + Download buttons */
+      .stButton > button, .stDownloadButton > button {{
+        background:{BRAND_BLUE} !important; color:#fff !important; border-color:{BRAND_BLUE} !important;
+        font-weight:700; border-radius:10px; height:48px;
+      }}
     </style>
     """,
     unsafe_allow_html=True,
@@ -101,17 +101,13 @@ def compute_metrics(
     fixed_overhead_annual: float,
 ):
     units = max(0, int(units))
-    # Revenue (pre-tax)
     m_rev_sub = fee_per_unit_month * units
     a_rev_sub = m_rev_sub * 12
-    # HST (pass-through)
     m_hst, a_hst = m_rev_sub * HST_RATE, a_rev_sub * HST_RATE
     m_rev_tot, a_rev_tot = m_rev_sub + m_hst, a_rev_sub + a_hst
-    # Expenses (manager salary prorated by days/5)
     manager_alloc = manager_salary_annual * (manager_days_per_week / 5.0)
     a_exp = manager_alloc + accounting_fees_annual + head_office_annual + fixed_overhead_annual
     m_exp = a_exp / 12.0
-    # Profits (pre-tax revenue basis)
     a_profit, m_profit = a_rev_sub - a_exp, m_rev_sub - m_exp
     return {
         "m_rev_sub": m_rev_sub, "a_rev_sub": a_rev_sub,
@@ -122,15 +118,10 @@ def compute_metrics(
         "a_profit": a_profit, "m_profit": m_profit,
     }
 
-def required_fee_for_margin(
-    target_margin_pct: float,
-    units: int,
-    manager_salary_annual: float,
-    manager_days_per_week: int,
-    accounting_fees_annual: float,
-    head_office_annual: float,
-    fixed_overhead_annual: float,
-):
+def required_fee_for_margin(target_margin_pct: float, units: int,
+                            manager_salary_annual: float, manager_days_per_week: int,
+                            accounting_fees_annual: float, head_office_annual: float,
+                            fixed_overhead_annual: float):
     if units <= 0:
         return float("inf")
     manager_alloc = manager_salary_annual * (manager_days_per_week / 5.0)
@@ -138,19 +129,13 @@ def required_fee_for_margin(
     m = max(0.0, min(0.95, target_margin_pct / 100.0))
     if 1.0 - m == 0:
         return float("inf")
-    req_a_rev = a_exp / (1.0 - m)               # pre-tax revenue needed
-    fee = req_a_rev / (units * 12.0)            # $/unit/month
-    return fee
+    req_a_rev = a_exp / (1.0 - m)
+    return req_a_rev / (units * 12.0)
 
-def margin_from_fee(
-    fee_per_unit_month: float,
-    units: int,
-    manager_salary_annual: float,
-    manager_days_per_week: int,
-    accounting_fees_annual: float,
-    head_office_annual: float,
-    fixed_overhead_annual: float,
-):
+def margin_from_fee(fee_per_unit_month: float, units: int,
+                    manager_salary_annual: float, manager_days_per_week: int,
+                    accounting_fees_annual: float, head_office_annual: float,
+                    fixed_overhead_annual: float):
     if units <= 0:
         return 0.0
     a_rev_sub = fee_per_unit_month * units * 12.0
@@ -160,22 +145,18 @@ def margin_from_fee(
     return 0.0 if a_rev_sub == 0 else (a_profit / a_rev_sub) * 100.0
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Header (logo + title)  — robust logo lookup
+# Header (logo + title) — robust logo lookup
 # ──────────────────────────────────────────────────────────────────────────────
-from pathlib import Path
-
 BASE = Path(__file__).resolve().parent
-# Try a few common names/locations (works whether app is at repo root or in a subfolder)
-logo_candidates = [
-    BASE / "assets" / "logo.png",
-    BASE / "assets" / "Logo.png",
-    BASE / "assets" / "alba_logo.png",
-    BASE / "assets" / "download.png",  # <- likely the one you already uploaded
-    Path("assets/logo.png"),
-    Path("assets/download.png"),
-]
-
-logo_path = next((p for p in logo_candidates if p.exists()), None)
+logo_path = next(
+    (p for p in [
+        BASE / "assets" / "logo.png",
+        BASE / "assets" / "download.png",
+        Path("assets/logo.png"),
+        Path("assets/download.png"),
+    ] if p.exists()),
+    None,
+)
 
 lcol, rcol = st.columns([3, 1], vertical_alignment="center")
 with lcol:
@@ -184,11 +165,6 @@ with lcol:
 with rcol:
     if logo_path:
         st.image(str(logo_path), use_column_width=True)
-    else:
-        # Helpful message + quick listing so we can see what’s in /assets
-        assets_dir = (BASE / "assets")
-        listing = ", ".join([p.name for p in assets_dir.glob("*")]) if assets_dir.exists() else "no assets folder found"
-        st.warning(f"Logo not found. Place a file in /assets named logo.png (or download.png). Found: {listing}")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Inputs
@@ -201,7 +177,7 @@ with c1:
 with c2:
     property_address = st.text_input("Address", "123 Example St, City, Province")
 
-units = st.number_input("Residential units", min_value=0, step=1, value=100)
+units = st.number_input("Residential units (count)", min_value=0, step=1, value=100)
 
 st.markdown("<div class='field-label'>Primary input mode</div>", unsafe_allow_html=True)
 mode = st.radio(
@@ -215,28 +191,28 @@ if "Target Margin" in mode:
     target_margin = st.number_input("Target profit margin (%)", min_value=0.0, max_value=95.0, step=0.5, format="%.2f", value=20.0)
     fee_input = None
 else:
-    fee_input = st.number_input("Management fee $/unit/month (pre-tax)", min_value=0.0, step=5.0, format="%.2f", value=75.0)
+    fee_input = st.number_input("Management fee (C$/unit/month, pre-tax)", min_value=0.0, step=5.0, format="%.2f", value=75.0)
     target_margin = None
 
 st.markdown("**Manager & Overhead (annual)**")
 g1, g2 = st.columns(2)
 with g1:
-    manager_salary = st.number_input("Manager salary (annual)", min_value=0.0, step=1000.0, format="%.2f", value=90000.0)
+    manager_salary = st.number_input("Manager salary (C$/year)", min_value=0.0, step=1000.0, format="%.2f", value=90000.0)
 with g2:
-    manager_days = st.number_input("Manager days on-site per week (1–5)", min_value=1, max_value=5, step=1, value=2)
+    manager_days = st.number_input("Manager days on-site per week (1–5 days)", min_value=1, max_value=5, step=1, value=2)
 
 h1, h2 = st.columns(2)
 with h1:
-    accounting = st.number_input("Accounting fees (annual)", min_value=0.0, step=500.0, format="%.2f", value=12000.0)
+    accounting = st.number_input("Accounting fees (C$/year)", min_value=0.0, step=500.0, format="%.2f", value=12000.0)
 with h2:
-    head_office = st.number_input("Head office team time (annual)", min_value=0.0, step=500.0, format="%.2f", value=18000.0)
+    head_office = st.number_input("Head office team time (C$/year)", min_value=0.0, step=500.0, format="%.2f", value=18000.0)
 
-fixed_overhead = st.number_input("Fixed overhead (annual)", min_value=0.0, step=500.0, format="%.2f", value=30000.0)
+fixed_overhead = st.number_input("Fixed overhead (C$/year)", min_value=0.0, step=500.0, format="%.2f", value=30000.0)
 
 st.markdown("**Projection Controls**")
 proj1, proj2 = st.columns(2)
 with proj1:
-    growth_rate = st.number_input("Annual fee increase %", min_value=0.0, max_value=25.0, step=0.5, format="%.2f", value=3.0)
+    growth_rate = st.number_input("Annual fee increase (%)", min_value=0.0, max_value=25.0, step=0.5, format="%.2f", value=3.0)
 with proj2:
     years = st.number_input("Projection years", min_value=1, max_value=10, step=1, value=5)
 
@@ -299,12 +275,10 @@ with cA:
     pie = go.Figure(go.Pie(labels=labels, values=vals, hole=0.6, marker=dict(colors=colors_pie)))
     pie.update_layout(
         title_text="Expense Breakdown (%)",
-        paper_bgcolor="#FFFFFF",
-        plot_bgcolor="#FFFFFF",
+        paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF",
         font=dict(family="Poppins", color=BRAND_TEXT),
         legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
-        margin=dict(l=10, r=10, t=40, b=40),
-        height=340,
+        margin=dict(l=10, r=10, t=40, b=40), height=340,
     )
     st.plotly_chart(pie, use_container_width=True, theme=None)
 
@@ -317,20 +291,15 @@ with cB:
         a_profit = a_rev - M["a_exp"]
         profits.append(a_profit)
         fee_year *= (1 + float(growth_rate) / 100.0)
-
-    bar = go.Figure(go.Bar(
-        x=years_labels, y=profits, marker_color=BRAND_BLUE,
-        text=[cad(p) for p in profits], textposition="outside"
-    ))
+    bar = go.Figure(go.Bar(x=years_labels, y=profits, marker_color=BRAND_BLUE,
+                           text=[cad(p) for p in profits], textposition="outside"))
     bar.update_layout(
         title_text=f"Profit Projection ({growth_rate:.1f}% annual fee increase)",
-        paper_bgcolor="#FFFFFF",
-        plot_bgcolor="#FFFFFF",
+        paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF",
         font=dict(family="Poppins", color=BRAND_TEXT),
         yaxis=dict(title="Annual Profit (CAD)", tickprefix="C$", showgrid=True, gridcolor="#EEF2F8"),
         xaxis=dict(title="Year", showgrid=False),
-        margin=dict(l=10, r=10, t=50, b=60),
-        height=340,
+        margin=dict(l=10, r=10, t=50, b=60), height=340,
     )
     st.plotly_chart(bar, use_container_width=True, theme=None)
 
@@ -368,11 +337,9 @@ if M["a_profit"] < 0:
 # PDF Export (ReportLab) – one page with logo, KPIs, table, and charts
 # ──────────────────────────────────────────────────────────────────────────────
 def fig_to_png_bytes(fig) -> bytes:
-    # Requires kaleido
     return fig.to_image(format="png", scale=2, engine="kaleido")
 
 def build_pdf() -> bytes:
-    # Render charts to PNG
     pie_png = fig_to_png_bytes(pie)
     bar_png = fig_to_png_bytes(bar)
 
@@ -383,21 +350,17 @@ def build_pdf() -> bytes:
     y = H - margin
 
     # Header with logo + title
-    if os.path.exists(logo_path):
+    if logo_path and os.path.exists(str(logo_path)):
         try:
-            c.drawImage(ImageReader(logo_path), margin, y-40, width=120, height=40, preserveAspectRatio=True, mask='auto')
+            c.drawImage(ImageReader(str(logo_path)), margin, y-40, width=120, height=40, preserveAspectRatio=True, mask='auto')
         except Exception:
             pass
     c.setFillColor(colors.HexColor(BRAND_TEXT))
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(margin + 140, y-18, "ALBA Pricing & Profit Planner")
-    c.setFont("Helvetica", 9)
-    c.setFillColor(colors.HexColor("#6B7280"))
+    c.setFont("Helvetica-Bold", 16); c.drawString(margin + 140, y-18, "ALBA Pricing & Profit Planner")
+    c.setFont("Helvetica", 9); c.setFillColor(colors.HexColor("#6B7280"))
     c.drawString(margin + 140, y-34, f"{property_name} — {property_address} — {datetime.now():%Y-%m-%d}")
 
-    # Blue divider
-    c.setFillColor(colors.HexColor(BRAND_BLUE))
-    c.rect(margin, y-50, W - 2*margin, 3, stroke=0, fill=1)
+    c.setFillColor(colors.HexColor(BRAND_BLUE)); c.rect(margin, y-50, W - 2*margin, 3, stroke=0, fill=1)
 
     # KPI boxes
     c.setFillColor(colors.white); c.setStrokeColor(colors.HexColor(CARD_BORDER))
@@ -415,21 +378,15 @@ def build_pdf() -> bytes:
     c.drawString(margin+10+box_w+10, y-88, f"{margin:.2f}%")
     c.drawString(margin+10+2*(box_w+10), y-88, f"{cad(M['m_profit'])} / {cad(M['a_profit'])}")
 
-    # P&L table (compact)
+    # P&L table
     c.setFont("Helvetica-Bold", 11); c.setFillColor(colors.HexColor(BRAND_BLUE))
     c.drawString(margin, y-140, "Profit & Loss (Monthly vs Annual)")
     c.setFont("Helvetica", 9); c.setFillColor(colors.HexColor(BRAND_TEXT))
-
-    ty = y-155
-    col2 = margin + 260
-    col3 = margin + 420
+    ty = y-155; col2 = margin + 260; col3 = margin + 420
     c.setFont("Helvetica-Bold", 9)
     c.drawString(margin, ty, "Line item"); c.drawString(col2, ty, "Monthly"); c.drawString(col3, ty, "Annual")
-    c.setStrokeColor(colors.HexColor(CARD_BORDER))
-    c.line(margin, ty-2, W-margin, ty-2)
-    c.setFont("Helvetica", 9)
-
-    ty -= 14
+    c.setStrokeColor(colors.HexColor(CARD_BORDER)); c.line(margin, ty-2, W-margin, ty-2)
+    c.setFont("Helvetica", 9); ty -= 14
     for name, mv, av in rows:
         mv_str = cad(mv) if mv != "" else ""
         av_str = cad(av) if av != "" else ""
@@ -437,27 +394,21 @@ def build_pdf() -> bytes:
         c.drawRightString(col2+120, ty, mv_str)
         c.drawRightString(W-margin, ty, av_str)
         ty -= 14
-        if ty < 220:  # stop before charts
-            break
+        if ty < 220: break
 
     # Charts row
     chart_h = 180; chart_w = (W - 2*margin - 10) / 2
-    try:
-        c.drawImage(ImageReader(BytesIO(pie_png)), margin, 80, width=chart_w, height=chart_h, preserveAspectRatio=True, mask='auto')
-    except Exception:
-        pass
-    try:
-        c.drawImage(ImageReader(BytesIO(bar_png)), margin + chart_w + 10, 80, width=chart_w, height=chart_h, preserveAspectRatio=True, mask='auto')
-    except Exception:
-        pass
+    try: c.drawImage(ImageReader(BytesIO(pie_png)), margin, 80,  width=chart_w, height=chart_h, preserveAspectRatio=True, mask='auto')
+    except Exception: pass
+    try: c.drawImage(ImageReader(BytesIO(bar_png)), margin + chart_w + 10, 80, width=chart_w, height=chart_h, preserveAspectRatio=True, mask='auto')
+    except Exception: pass
 
     # Footer
     c.setFont("Helvetica", 8); c.setFillColor(colors.HexColor("#6B7280"))
     c.drawString(margin, 60, "HST fixed at 13% (Ontario). HST is pass-through and excluded from profit/margin.")
     c.drawRightString(W - margin, 60, "ALBA Property Management")
 
-    c.showPage(); c.save()
-    buf.seek(0)
+    c.showPage(); c.save(); buf.seek(0)
     return buf.getvalue()
 
 st.markdown("<div class='section-title'>Export</div>", unsafe_allow_html=True)
