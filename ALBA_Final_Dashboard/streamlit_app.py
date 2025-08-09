@@ -75,6 +75,24 @@ st.markdown(
     font-weight: 700;
     margin: 6px 0 4px;
 }}
+/* Make all Streamlit widget labels blue & bold (fixes white labels) */
+label[data-testid="stWidgetLabel"] {{
+  color: {BRAND_BLUE} !important;
+  font-weight: 700 !important;
+}}
+
+/* Our custom mini label used above "Primary input mode" */
+.field-label {{
+  color: {BRAND_BLUE} !important;
+  font-weight: 700 !important;
+  margin: 6px 0 4px;
+}}
+
+/* Make the radio option text dark and readable */
+div[role="radiogroup"] label span {{
+  color: {BRAND_TEXT} !important;
+  font-weight: 600 !important;
+}}
     </style>
     """,
     unsafe_allow_html=True,
