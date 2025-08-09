@@ -1,255 +1,416 @@
-# streamlit_app.py
-# ALBA Pricing & Profit — final build with mode toggle, manager days allocation, fixed HST 13%, charts, and PDF export
+# streamlit_app.py — ALBA Pricing & Profit (final UI tweaks)
+# - Headings in ALBA blue, rounded cards, Poppins font
+# - Mode toggle (blue radios), 13% HST fixed
+# - Manager days as 1–5 numeric box (salary prorated)
+# - Doughnut chart on white; projection = bar chart with clear axes
+# - Unified Monthly & Annual P&L
+
 from __future__ import annotations
 from datetime import datetime
-from io import BytesIO
-from pathlib import Path
-
+import os
 import streamlit as st
 import plotly.graph_objects as go
 
-from calculations import (
-    cad, Inputs, FULL_TIME_DAYS, HST_RATE,
-    allocated_manager_cost, annual_expenses_total,
-    required_fee_for_margin, margin_from_fee,
-    compute_core, projection
+# ──────────────────────────────────────────────────────────────────────────────
+# Page + Brand theme
+# ──────────────────────────────────────────────────────────────────────────────
+st.set_page_config(page_title="ALBA Pricing & Profit", page_icon="🏢", layout="wide")
+
+BRAND_BLUE = "#1E4B87"
+BRAND_TEXT = "#0F2544"
+CARD_BG = "#FFFFFF"
+CARD_BORDER = "#E5ECF6"
+CARD_SOFT = "#F6FAFF"
+
+st.markdown(
+    f"""
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+      html, body, [data-testid="stAppViewContainer"] {{
+        background: #FFFFFF !important;
+        color: {BRAND_TEXT} !important;
+        font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
+      }}
+      [data-testid="stHeader"] {{
+        background: #FFFFFF !important; border-bottom: none !important;
+      }}
+      .container {{ max-width: 1200px; margin: 0 auto; }}
+      .brand-title {{
+        color: {BRAND_TEXT}; font-weight: 800; font-size: 30px; margin: 2px 0 0;
+      }}
+      .brand-bar {{ height: 5px; background: {BRAND_BLUE}; margin: 8px 0 16px; border-radius: 2px; }}
+      .section-title {{
+        color: {BRAND_BLUE}; font-weight: 800; margin: 8px 0 8px; font-size: 18px;
+      }}
+      .card {{
+        border: 1px solid {CARD_BORDER}; background: {CARD_BG};
+        border-radius: 14px; padding: 14px 16px; box-shadow: 0 2px 8px rgba(17,38,146,0.06);
+      }}
+      .kpi-value {{ font-size: 28px; font-weight: 800; margin-top: 2px; }}
+      .good {{ color: #1E7D4F }} .bad {{ color: #B00020 }}
+      table.pl {{ width:100%; border-collapse: collapse; border:1px solid {CARD_BORDER};
+                 border-radius:12px; overflow:hidden; background:#fff; }}
+      table.pl th, table.pl td {{ padding:10px 12px; border-bottom:1px solid #EEF2F8; text-align:left }}
+      table.pl th {{ background:{CARD_SOFT}; color:{BRAND_TEXT} }}
+      table.pl tr:last-child td {{ border-bottom:none }}
+      .muted {{ color:#6B7280; font-size:12px }}
+
+      /* Blue radios with white interior */
+      input[type="radio"] {{
+        accent-color: {BRAND_BLUE} !important;
+        background-color: #FFFFFF !important;
+      }}
+      /* Primary buttons */
+      .stButton > button {{
+        background: {BRAND_BLUE} !important;
+        border-color: {BRAND_BLUE} !important;
+        color: #fff !important;
+        font-weight: 700;
+        border-radius: 10px;
+      }}
+      /* Inputs on white */
+      .stTextInput>div>div>input, .stNumberInput>div>div>input {{
+        background: #fff !important;
+        color: {BRAND_TEXT} !important;
+      }}
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
-from pdf_utils import build_pdf
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Page setup & style (Poppins + ALBA vibe)
+# Helpers
 # ──────────────────────────────────────────────────────────────────────────────
-st.set_page_config(page_title="ALBA Pricing & Profit", page_icon="🏢", layout="centered")
+def cad(x: float) -> str:
+    x = float(x)
+    return f"-C${abs(x):,.2f}" if x < 0 else f"C${x:,.2f}"
 
-st.markdown("""
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --alba-blue:#1E4B87; --alba-text:#0F2544; --alba-bg:#FFFFFF; --soft:#F6FAFF; --border:#E5ECF6;
-  }
-  html, body, [data-testid="stAppViewContainer"]{
-    background:var(--alba-bg)!important; color:var(--alba-text)!important;
-    font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  }
-  [data-testid="stHeader"]{background:var(--alba-bg)!important;border-bottom:none}
-  .block-container{max-width:1100px}
-  .brand-title{font-weight:800;font-size:28px;margin:6px 0 4px}
-  .brand-bar{height:5px;background:var(--alba-blue);margin:6px 0 16px;border-radius:2px}
-  .card{border:1px solid var(--border); border-radius:14px; background:#fff;
-        box-shadow:0 2px 8px rgba(17,38,146,0.06); padding:14px 16px; }
-  .kpi-value{font-size:28px;font-weight:800;margin-top:2px}
-  .bad{color:#B00020} .good{color:#1E7D4F}
-  .section-title{font-weight:800;margin:10px 0 8px}
-  table.pl{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#fff}
-  table.pl th, table.pl td{padding:10px 12px;border-bottom:1px solid #EEF2F8;text-align:left}
-  table.pl th{background:#F6FAFF;color:#22314D}
-  table.pl tr:last-child td{border-bottom:none}
-  .muted{color:#6B7280;font-size:12px}
-  .stButton>button{background:var(--alba-blue)!important;border-color:var(--alba-blue)!important;color:#fff!important}
-</style>
-""", unsafe_allow_html=True)
+HST_RATE = 0.13  # Fixed 13% (Ontario)
 
-ASSETS = Path("assets")
-LOGO = ASSETS / "logo.png"
+def compute_metrics(
+    units: int,
+    fee_per_unit_month: float,
+    manager_salary_annual: float,
+    manager_days_per_week: int,  # 1..5
+    accounting_fees_annual: float,
+    head_office_annual: float,
+    fixed_overhead_annual: float,
+):
+    units = max(0, int(units))
+    # Revenue (pre-tax)
+    m_rev_sub = fee_per_unit_month * units
+    a_rev_sub = m_rev_sub * 12
+    # HST (pass-through)
+    m_hst, a_hst = m_rev_sub * HST_RATE, a_rev_sub * HST_RATE
+    m_rev_tot, a_rev_tot = m_rev_sub + m_hst, a_rev_sub + a_hst
+    # Expenses (manager salary prorated by days/5)
+    manager_alloc = manager_salary_annual * (manager_days_per_week / 5.0)
+    a_exp = manager_alloc + accounting_fees_annual + head_office_annual + fixed_overhead_annual
+    m_exp = a_exp / 12.0
+    # Profits (pre-tax revenue basis)
+    a_profit, m_profit = a_rev_sub - a_exp, m_rev_sub - m_exp
+    return {
+        "m_rev_sub": m_rev_sub, "a_rev_sub": a_rev_sub,
+        "m_hst": m_hst, "a_hst": a_hst,
+        "m_rev_tot": m_rev_tot, "a_rev_tot": a_rev_tot,
+        "manager_alloc": manager_alloc,
+        "a_exp": a_exp, "m_exp": m_exp,
+        "a_profit": a_profit, "m_profit": m_profit,
+    }
+
+def required_fee_for_margin(
+    target_margin_pct: float,
+    units: int,
+    manager_salary_annual: float,
+    manager_days_per_week: int,
+    accounting_fees_annual: float,
+    head_office_annual: float,
+    fixed_overhead_annual: float,
+):
+    """Compute $/unit/month fee to hit a target profit margin on pre-tax revenue."""
+    if units <= 0:
+        return float("inf")
+    manager_alloc = manager_salary_annual * (manager_days_per_week / 5.0)
+    a_exp = manager_alloc + accounting_fees_annual + head_office_annual + fixed_overhead_annual
+    m = max(0.0, min(0.95, target_margin_pct / 100.0))
+    if 1.0 - m == 0:
+        return float("inf")
+    req_a_rev = a_exp / (1.0 - m)               # pre-tax revenue needed
+    fee = req_a_rev / (units * 12.0)            # $/unit/month
+    return fee
+
+def margin_from_fee(
+    fee_per_unit_month: float,
+    units: int,
+    manager_salary_annual: float,
+    manager_days_per_week: int,
+    accounting_fees_annual: float,
+    head_office_annual: float,
+    fixed_overhead_annual: float,
+):
+    if units <= 0:
+        return 0.0
+    # Revenue (pre-tax)
+    a_rev_sub = fee_per_unit_month * units * 12.0
+    # Expenses
+    manager_alloc = manager_salary_annual * (manager_days_per_week / 5.0)
+    a_exp = manager_alloc + accounting_fees_annual + head_office_annual + fixed_overhead_annual
+    a_profit = a_rev_sub - a_exp
+    return 0.0 if a_rev_sub == 0 else (a_profit / a_rev_sub) * 100.0
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Header (logo + title)
+# Header with logo
 # ──────────────────────────────────────────────────────────────────────────────
-left, right = st.columns([3,1], vertical_alignment="center")
+logo_path = os.path.join("assets", "logo.png")
+left, right = st.columns([3, 1], vertical_alignment="center")
 with left:
     st.markdown("<div class='brand-title'>ALBA Property Management — Pricing & Profit</div>", unsafe_allow_html=True)
     st.markdown("<div class='brand-bar'></div>", unsafe_allow_html=True)
 with right:
-    if LOGO.exists():
-        st.image(str(LOGO), use_column_width=True)
-    else:
-        st.caption("Upload assets/logo.png to show your logo.")
+    if os.path.exists(logo_path):
+        st.image(logo_path, use_column_width=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Inputs
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<div class='section-title'>Inputs</div>", unsafe_allow_html=True)
-with st.form("inputs_form"):
-    c1, c2 = st.columns(2)
-    with c1:
-        prop_name = st.text_input("Property name", "Sample Property")
-    with c2:
-        prop_addr = st.text_input("Address", "123 Example St, City, Province")
 
-    res_units = st.number_input("Residential units", min_value=0, step=1, value=100)
+c1, c2 = st.columns([3, 2])
+with c1:
+    property_name = st.text_input("Property name", "Sample Property")
+with c2:
+    property_address = st.text_input("Address", "123 Example St, City, Province")
 
-    # Mode toggle
-    mode = st.radio("Primary input mode", ["Target Margin % → Calculate Fee", "Price per Unit → Calculate Margin"],
-                    index=0, horizontal=True)
-    is_target_mode = mode.startswith("Target")
+units = st.number_input("Residential units", min_value=0, step=1, value=100)
 
-    if is_target_mode:
-        target_margin = st.number_input("Target profit margin (%)", min_value=0.0, max_value=95.0, step=0.5, value=20.0)
-        fee_input = None
-    else:
-        fee_input = st.number_input("Management fee $/unit/month (pre-tax)", min_value=0.0, step=5.0, format="%.2f", value=75.0)
-        target_margin = None
+st.caption("Primary input mode")
+mode = st.radio(
+    "Choose what you enter:",
+    ["Target Margin % → Calculate Fee", "Price per unit → Calculate Margin"],
+    label_visibility="collapsed",
+    index=0,
+)
 
-    st.markdown("**Manager & Overhead (annual)**")
-    r1, r2 = st.columns(2)
-    with r1:
-        manager_salary = st.number_input("Manager salary (annual)", min_value=0.0, step=1000.0, format="%.2f", value=90000.0)
-    with r2:
-        manager_days = st.slider("Manager days on-site per week (0–5)", min_value=0, max_value=5, value=5)
-
-    o1, o2 = st.columns(2)
-    with o1:
-        accounting = st.number_input("Accounting fees (annual)", min_value=0.0, step=500.0, format="%.2f", value=12000.0)
-    with o2:
-        head_office = st.number_input("Head office team time (annual)", min_value=0.0, step=500.0, format="%.2f", value=18000.0)
-
-    fixed_overhead = st.number_input("Fixed overhead (annual)", min_value=0.0, step=500.0, format="%.2f", value=30000.0)
-
-    st.markdown("**Projection Controls**")
-    g1, g2 = st.columns(2)
-    with g1:
-        growth_pct = st.number_input("Annual fee increase %", min_value=0.0, max_value=20.0, step=0.5, value=3.0)
-    with g2:
-        years = st.number_input("Projection years", min_value=1, max_value=10, step=1, value=5)
-
-    submitted = st.form_submit_button("Apply Changes", use_container_width=True)
-
-# Compute expenses
-exp_annual = annual_expenses_total(manager_salary, manager_days, accounting, head_office, fixed_overhead)
-
-# Determine fee/margin according to mode
-if is_target_mode:
-    required_fee = required_fee_for_margin(res_units, exp_annual, target_margin or 0.0)
-    fee = required_fee
-    actual_margin = margin_from_fee(res_units, fee, exp_annual)
+# Mode-specific inputs
+fee_input = None
+target_margin = None
+if "Target Margin" in mode:
+    target_margin = st.number_input("Target profit margin (%)", min_value=0.0, max_value=95.0, step=0.5, format="%.2f", value=20.0)
 else:
-    fee = fee_input or 0.0
-    actual_margin = margin_from_fee(res_units, fee, exp_annual)
-    required_fee = None  # not used in this mode
+    fee_input = st.number_input("Management fee $/unit/month (pre-tax)", min_value=0.0, step=5.0, format="%.2f", value=75.0)
 
-# Core monthly/annual rollups (HST fixed at 13% via calculations module)
-core = compute_core(res_units, fee, exp_annual)
+st.markdown("**Manager & Overhead (annual)**")
+g1, g2 = st.columns(2)
+with g1:
+    manager_salary = st.number_input("Manager salary (annual)", min_value=0.0, step=1000.0, format="%.2f", value=90000.0)
+with g2:
+    # Numeric box 1–5 (no slider)
+    manager_days = st.number_input("Manager days on-site per week (1–5)", min_value=1, max_value=5, step=1, value=2)
+
+h1, h2 = st.columns(2)
+with h1:
+    accounting = st.number_input("Accounting fees (annual)", min_value=0.0, step=500.0, format="%.2f", value=12000.0)
+with h2:
+    head_office = st.number_input("Head office team time (annual)", min_value=0.0, step=500.0, format="%.2f", value=18000.0)
+
+fixed_overhead = st.number_input("Fixed overhead (annual)", min_value=0.0, step=500.0, format="%.2f", value=30000.0)
+
+st.markdown("**Projection Controls**")
+proj1, proj2 = st.columns(2)
+with proj1:
+    growth_rate = st.number_input("Annual fee increase %", min_value=0.0, max_value=25.0, step=0.5, format="%.2f", value=3.0)
+with proj2:
+    years = st.number_input("Projection years", min_value=1, max_value=10, step=1, value=5)
+
+st.button("Apply Changes", use_container_width=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Outputs — KPI cards
+# Calculations (depending on mode)
+# ──────────────────────────────────────────────────────────────────────────────
+if "Target Margin" in mode:
+    fee_calc = required_fee_for_margin(
+        target_margin, units, manager_salary, manager_days, accounting, head_office, fixed_overhead
+    )
+    fee_to_use = fee_calc
+    margin_calc = margin_from_fee(
+        fee_to_use, units, manager_salary, manager_days, accounting, head_office, fixed_overhead
+    )
+else:
+    fee_to_use = fee_input
+    margin_calc = margin_from_fee(
+        fee_to_use, units, manager_salary, manager_days, accounting, head_office, fixed_overhead
+    )
+    fee_calc = None  # not applicable
+
+M = compute_metrics(units, fee_to_use, manager_salary, manager_days, accounting, head_office, fixed_overhead)
+
+# Break-even fee (margin = 0)
+break_even_fee = required_fee_for_margin(
+    target_margin_pct=0.0,
+    units=units,
+    manager_salary_annual=manager_salary,
+    manager_days_per_week=manager_days,
+    accounting_fees_annual=accounting,
+    head_office_annual=head_office,
+    fixed_overhead_annual=fixed_overhead,
+)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Outputs — KPI row
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<div class='section-title'>Outputs</div>", unsafe_allow_html=True)
-k1, k2, k3 = st.columns(3)
+k1, k2, k3 = st.columns([1, 1, 2])
 with k1:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.caption("Break-even $/unit/month (pre-tax)")
-    # Break-even here is the fee needed for 0% profit (i.e., margin 0)
-    fee_zero_margin = required_fee_for_margin(res_units, exp_annual, 0.0)
-    st.markdown(f"<div class='kpi-value'>{cad(fee_zero_margin)}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='kpi-value'>{cad(break_even_fee)}</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
+
 with k2:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    if is_target_mode:
-        st.caption("Required fee to hit target margin")
-        st.markdown(f"<div class='kpi-value'>{cad(required_fee)}</div>", unsafe_allow_html=True)
+    if "Target Margin" in mode:
+        st.caption("Required price (to hit target)")
+        st.markdown(f"<div class='kpi-value'>{cad(fee_to_use)}</div>", unsafe_allow_html=True)
     else:
-        st.caption("Resulting margin at entered fee")
-        cls = "good" if actual_margin >= 0 else "bad"
-        st.markdown(f"<div class='kpi-value {cls}'>{actual_margin:.2f}%</div>", unsafe_allow_html=True)
+        cls = "good" if margin_calc >= 0 else "bad"
+        st.caption("Resulting margin")
+        st.markdown(f"<div class='kpi-value {cls}'>{margin_calc:.2f}%</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
+
 with k3:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.caption("Monthly Profit / Annual Profit (pre-tax revenue basis)")
-    st.markdown(f"<div class='kpi-value'>{cad(core['monthly_profit'])} / {cad(core['annual_profit'])}</div>", unsafe_allow_html=True)
+    st.caption("Profit (Monthly / Annual)")
+    st.markdown(f"<div class='kpi-value'>{cad(M['m_profit'])} / {cad(M['a_profit'])}</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Charts — Expense donut & Profit projection
+# Charts — Doughnut (expenses) + Bar projection
 # ──────────────────────────────────────────────────────────────────────────────
-c1, c2 = st.columns(2)
-with c1:
-    labels = ["Manager (allocated)", "Accounting", "Head office", "Fixed overhead"]
-    manager_alloc = allocated_manager_cost(manager_salary, manager_days)
-    values = [manager_alloc, accounting, head_office, fixed_overhead]
-    pie = go.Figure(go.Pie(labels=labels, values=values, hole=0.55))
-    pie.update_layout(title_text="Expense Breakdown (%)", height=320, margin=dict(l=10,r=10,t=50,b=10))
-    st.plotly_chart(pie, use_container_width=True, theme="streamlit")
+cA, cB = st.columns(2)
 
-with c2:
-    proj = projection(res_units, fee, years=int(years), growth_pct=(growth_pct/100.0), expenses_annual=exp_annual)
-    xs = [f"Year {i}" for i in range(1, int(years)+1)]
-    line = go.Figure()
-    line.add_trace(go.Scatter(x=xs, y=proj["profits"], mode="lines+markers", name="Profit"))
-    line.update_layout(title_text=f"Profit Projection ({growth_pct:.1f}% annual fee increase)", height=320, margin=dict(l=10,r=10,t=50,b=10))
-    st.plotly_chart(line, use_container_width=True, theme="streamlit")
+with cA:
+    # Expense doughnut — brand colors on white
+    labels = ["Manager (allocated)", "Fixed overhead", "Head office", "Accounting"]
+    vals = [M["manager_alloc"], fixed_overhead, head_office, accounting]
+    colors = [BRAND_BLUE, "#7FB3FF", "#A5C8FF", "#D6E6FF"]
+    pie = go.Figure(go.Pie(labels=labels, values=vals, hole=0.55, marker=dict(colors=colors)))
+    pie.update_layout(
+        title_text="Expense Breakdown (%)",
+        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="#FFFFFF",
+        legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5),
+        margin=dict(l=10, r=10, t=40, b=40),
+        height=340,
+    )
+    st.plotly_chart(pie, use_container_width=True, theme=None)
+
+with cB:
+    # Profit projection bar chart using editable growth rate
+    years_labels = [f"Year {i}" for i in range(1, int(years) + 1)]
+    profits = []
+    fee_year = fee_to_use
+    for _ in years_labels:
+        # Compute profit for this year with current fee_year; expenses assumed flat
+        m_rev_sub_y = fee_year * units
+        a_rev_sub_y = m_rev_sub_y * 12
+        a_profit_y = a_rev_sub_y - M["a_exp"]
+        profits.append(a_profit_y)
+        fee_year *= (1 + float(growth_rate) / 100.0)
+
+    bar = go.Figure(go.Bar(x=years_labels, y=profits, marker_color=BRAND_BLUE, text=[cad(p) for p in profits], textposition="outside"))
+    bar.update_layout(
+        title_text=f"Profit Projection ({growth_rate:.1f}% annual fee increase)",
+        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="#FFFFFF",
+        yaxis=dict(title="Annual Profit (CAD)", tickprefix="C$", showgrid=True, gridcolor="#EEF2F8"),
+        xaxis=dict(title="Year"),
+        margin=dict(l=10, r=10, t=40, b=60),
+        height=340,
+    )
+    st.plotly_chart(bar, use_container_width=True, theme=None)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Unified P&L
+# Unified P&L (Monthly vs Annual)
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<div class='section-title'>Profit & Loss (Monthly vs Annual)</div>", unsafe_allow_html=True)
-pl_rows = [
+rows = [
     ("REVENUE (pre-tax)", "", ""),
-    ("Subtotal fees", core["monthly_rev_subtotal"], core["annual_rev_subtotal"]),
-    ("HST 13% (pass-through)", core["monthly_hst"], core["annual_hst"]),
-    ("Total billed (with HST)", core["monthly_rev_total"], core["annual_rev_total"]),
+    ("Subtotal fees", M["m_rev_sub"], M["a_rev_sub"]),
+    (f"HST 13% (pass-through)", M["m_hst"], M["a_hst"]),
+    ("Total billed (with HST)", M["m_rev_tot"], M["a_rev_tot"]),
     ("", "", ""),
     ("EXPENSES", "", ""),
-    ("Manager (allocated)", manager_alloc/12, manager_alloc),
-    ("Accounting", accounting/12, accounting),
-    ("Head office", head_office/12, head_office),
-    ("Fixed overhead", fixed_overhead/12, fixed_overhead),
-    ("Total operating expenses", core["exp_monthly"], core["exp_annual"]),
+    ("Manager (allocated)", M["manager_alloc"]/12.0, M["manager_alloc"]),
+    ("Accounting fees", accounting/12.0, accounting),
+    ("Head office team time", head_office/12.0, head_office),
+    ("Fixed overhead", fixed_overhead/12.0, fixed_overhead),
+    ("Total operating expenses", M["m_exp"], M["a_exp"]),
     ("", "", ""),
-    ("PROFIT / (LOSS)", core["monthly_profit"], core["annual_profit"]),
+    ("PROFIT / (LOSS)", M["m_profit"], M["a_profit"]),
 ]
-
 html = ["<table class='pl'>", "<tr><th>Line item</th><th>Monthly</th><th>Annual</th></tr>"]
-for name, mv, av in pl_rows:
+for name, mv, av in rows:
     mv_str = cad(mv) if mv != "" else ""
     av_str = cad(av) if av != "" else ""
     html.append(f"<tr><td><strong>{name}</strong></td><td>{mv_str}</td><td>{av_str}</td></tr>")
 html.append("</table>")
 st.markdown("\n".join(html), unsafe_allow_html=True)
 
+if M["a_profit"] < 0:
+    st.error("Negative margin detected. Increase fee or reduce costs.")
+
 # ──────────────────────────────────────────────────────────────────────────────
-# Export PDF — mirror UI
+# Export (print-friendly HTML → Save as PDF)
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<div class='section-title'>Export</div>", unsafe_allow_html=True)
-st.caption("Branded one-pager PDF (logo, KPIs, P&L, charts).")
+st.caption("Use your browser’s **Print → Save as PDF** to export the one-pager.")
 
-def _fig_to_png(fig):
-    return fig.to_image(format="png", width=1200, height=700, scale=2)
+summary_html = f"""
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8'>
+<title>ALBA Pricing Summary</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+  body {{ font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: {BRAND_TEXT}; background:#fff; margin:24px; }}
+  h1 {{ margin:0 0 6px 0; color:{BRAND_TEXT}; }}
+  .muted {{ color:#6b7280; font-size:12px; }}
+  .bar {{ height:4px; background:{BRAND_BLUE}; margin:8px 0 12px; }}
+  table {{ width:100%; border-collapse:collapse; margin:12px 0; }}
+  th, td {{ border:1px solid #e5e7eb; padding:8px; text-align:left; }}
+  th {{ background:{CARD_SOFT}; }}
+  .kpis {{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }}
+  .card {{ border:1px solid #e5e7eb; padding:10px 12px; border-radius:10px; }}
+  .big {{ font-size:18px; font-weight:800; }}
+  @media print {{ @page {{ size:A4; margin:14mm; }} }}
+</style>
+</head>
+<body>
+  <h1>ALBA Property Management — Pricing & Profit</h1>
+  <div class='muted'>{property_name} — {property_address} — {datetime.now().strftime('%Y-%m-%d')}</div>
+  <div class='bar'></div>
 
-charts_png = {
-    "expense_donut.png": pie.to_image(format="png", width=1000, height=600, scale=2),
-    "profit_projection.png": line.to_image(format="png", width=1000, height=600, scale=2),
-}
+  <div class='kpis'>
+    <div class='card'><div>Break-even $/unit/month</div><div class='big'>{cad(break_even_fee)}</div></div>
+    <div class='card'><div>{"Required price (to hit target)" if "Target Margin" in mode else "Resulting margin"}</div><div class='big'>{cad(fee_to_use) if "Target Margin" in mode else f"{margin_calc:.2f}%"} </div></div>
+  </div>
 
-kpi_rows = []
-if is_target_mode:
-    kpi_rows.append(["Required fee to hit target margin", cad(required_fee)])
-else:
-    kpi_rows.append(["Resulting margin at entered fee", f"{actual_margin:.2f}%"])
-kpi_rows.extend([
-    ["Break-even $/unit/month (pre-tax)", cad(fee_zero_margin)],
-    ["Monthly Profit / Annual Profit", f"{cad(core['monthly_profit'])} / {cad(core['annual_profit'])}"],
-])
+  <h3 style="color:{BRAND_BLUE};">Profit & Loss (Monthly vs Annual)</h3>
+  <table>
+    <tr><th>Line item</th><th>Monthly</th><th>Annual</th></tr>
+    {''.join([f"<tr><td><strong>{n}</strong></td><td>{cad(mv) if mv!='' else ''}</td><td>{cad(av) if av!='' else ''}</td></tr>" for (n,mv,av) in rows])}
+  </table>
 
-pl_rows_pdf = []
-for name, mv, av in pl_rows:
-    mv_str = cad(mv) if mv != "" else ""
-    av_str = cad(av) if av != "" else ""
-    pl_rows_pdf.append([name, mv_str, av_str])
+  <div class='muted'>HST fixed at 13% (Ontario). HST is pass-through and excluded from profit/margin.</div>
+</body>
+</html>
+"""
 
-pdf_buffer = BytesIO()
-build_pdf(
-    buffer=pdf_buffer,
-    logo_path=str(LOGO) if LOGO.exists() else None,
-    as_of=datetime.now().strftime("%Y-%m-%d"),
-    prop_name=prop_name, prop_addr=prop_addr,
-    kpis=kpi_rows,
-    pl_rows=pl_rows_pdf,
-    charts=charts_png,
-)
 st.download_button(
-    "Download Summary (PDF)",
-    data=pdf_buffer.getvalue(),
-    file_name=f"ALBA_Pricing_Summary_{datetime.now().strftime('%Y%m%d')}.pdf",
-    mime="application/pdf",
+    "Download Print Summary (HTML)",
+    data=summary_html.encode("utf-8"),
+    file_name=f"ALBA_Pricing_Summary_{datetime.now().strftime('%Y%m%d')}.html",
+    mime="text/html",
     use_container_width=True,
 )
