@@ -208,17 +208,27 @@ def margin_from_fee(
     return 0.0 if a_rev_sub == 0 else (a_profit / a_rev_sub) * 100.0
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Header (logo + title)
+# Header (logo + title) — robust lookup
 # ──────────────────────────────────────────────────────────────────────────────
-logo_path = os.path.join("assets", "logo.png")
+from pathlib import Path
+BASE = Path(__file__).resolve().parent
+logo_candidates = [
+    BASE / "assets" / "logo.png",
+    BASE / "assets" / "Logo.png",
+    BASE / "assets" / "download.png",
+    Path("assets/logo.png"), Path("assets/download.png"),
+]
+logo_path = next((str(p) for p in logo_candidates if p.exists()), None)
+
 lcol, rcol = st.columns([3, 1], vertical_alignment="center")
 with lcol:
     st.markdown("<div class='brand-title'>ALBA Pricing & Profit Planner</div>", unsafe_allow_html=True)
     st.markdown("<div class='brand-bar'></div>", unsafe_allow_html=True)
 with rcol:
-    if os.path.exists(logo_path):
+    if logo_path:
         st.image(logo_path, use_column_width=True)
-
+    else:
+        st.caption("Add logo at assets/logo.png")
 # ──────────────────────────────────────────────────────────────────────────────
 # Inputs
 # ──────────────────────────────────────────────────────────────────────────────
