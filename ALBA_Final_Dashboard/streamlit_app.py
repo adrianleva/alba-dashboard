@@ -34,6 +34,12 @@ st.markdown(
     f"""
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
+
+      /* Force light look even if host prefers dark */
+      :root {{
+        color-scheme: light !important;
+      }}
+
       html, body, [data-testid="stAppViewContainer"] {{
         background: #FFFFFF !important;
         color: {BRAND_TEXT} !important;
@@ -66,10 +72,40 @@ st.markdown(
         font-weight:700; border-radius:10px;
       }}
 
-      /* Inputs on white */
-      .stTextInput>div>div>input, .stNumberInput>div>div>input {{
-        background:#fff !important; color:{BRAND_TEXT} !important;
+      /* Inputs — large, white, square, Poppins, no red */
+      /* Newer Streamlit input core */
+      div[data-baseweb="input"] {{
+        background:#FFFFFF !important;
+        color:{BRAND_TEXT} !important;
+        border:2px solid {BRAND_BLUE} !important;
+        border-radius:12px !important;
       }}
+      div[data-baseweb="input"] input {{
+        font-family:Poppins, sans-serif !important;
+        font-size:24px !important;
+        font-weight:700 !important;
+        color:{BRAND_TEXT} !important;
+        height:60px !important;
+        padding:10px 12px !important;
+        text-align:right !important;
+        background:#FFFFFF !important;
+        box-shadow:none !important;
+      }}
+      /* Older wrappers (covers some hosts) */
+      .stTextInput>div>div>input, .stNumberInput>div>div>input {{
+        background:#FFFFFF !important; color:{BRAND_TEXT} !important;
+        font-family:Poppins, sans-serif !important; font-size:24px !important; font-weight:700 !important;
+        height:60px !important; padding:10px 12px !important; text-align:right !important;
+        border:2px solid {BRAND_BLUE} !important; border-radius:12px !important; box-shadow:none !important;
+      }}
+      /* Kill validation red state */
+      input:invalid {{ border-color:{BRAND_BLUE} !important; box-shadow:none !important; }}
+
+      /* Make the “Primary input mode” text readable and blue */
+      .field-label {{ color:{BRAND_BLUE} !important; font-weight:700 !important; margin:6px 0 4px; }}
+
+      /* Radio text readable */
+      div[role="radiogroup"] * {{ color:{BRAND_TEXT} !important; }}
     </style>
     """,
     unsafe_allow_html=True,
@@ -177,7 +213,8 @@ with c2:
 
 units = st.number_input("Residential units", min_value=0, step=1, value=100)
 
-st.caption("Primary input mode")
+# Make this readable (blue) without changing your layout logic
+st.markdown("<div class='field-label'>Primary input mode</div>", unsafe_allow_html=True)
 mode = st.radio(
     "Choose what you enter:",
     ["Target Margin % → Calculate Fee", "Price per unit → Calculate Margin"],
