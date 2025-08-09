@@ -196,7 +196,7 @@ with c2:
 
 units = st.number_input("Residential units", min_value=0, step=1, value=100)
 
-st.caption("Primary input mode")
+st.markdown("<div class='field-label'>Primary input mode</div>", unsafe_allow_html=True)
 mode = st.radio(
     "Choose what you enter:",
     ["Target Margin % → Calculate Fee", "Price per unit → Calculate Margin"],
