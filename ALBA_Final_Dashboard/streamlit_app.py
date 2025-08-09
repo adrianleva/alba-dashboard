@@ -31,7 +31,7 @@ CARD_SOFT = "#F6FAFF"
 CARD_BORDER = "#E5ECF6"
 
 # ──────────────────────────────────────────────────────────────────────────────
-# REPLACE FROM HERE (first changed line) DOWN TO THE END OF FILE
+# REPLACE FROM THIS LINE (the <style> st.markdown) TO THE END OF FILE
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown(
     f"""
@@ -41,14 +41,14 @@ st.markdown(
       :root {{ color-scheme: light !important; }}
 
       html, body, [data-testid="stAppViewContainer"] {{
-        background: #FFFFFF !important;
-        color: {BRAND_TEXT} !important;
-        font-family: Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
+        background:#FFFFFF !important;
+        color:{BRAND_TEXT} !important;
+        font-family:Poppins, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
       }}
       [data-testid="stHeader"] {{ background:#FFFFFF !important; border-bottom:none !important; }}
 
       /* Headings */
-      h1, h2, h3, h4, h5, h6, label, .stMarkdown p, .stCaption {{ color: {BRAND_TEXT} !important; }}
+      h1, h2, h3, h4, h5, h6, label, .stMarkdown p, .stCaption {{ color:{BRAND_TEXT} !important; }}
       .brand-title {{ color:{BRAND_TEXT}; font-weight:800; font-size:30px; margin:2px 0 0; }}
       .brand-bar {{ height:5px; background:{BRAND_BLUE}; margin:8px 0 16px; border-radius:8px; }}
       .section-title {{ color:{BRAND_BLUE}; font-weight:800; margin:12px 0 8px; font-size:18px; }}
@@ -56,7 +56,7 @@ st.markdown(
 
       /* KPI cards */
       .card {{
-        border:1px solid {CARD_BORDER}; background:{CARD_BG};
+        border:1px solid {CARD_BORDER}; background:#fff;
         border-radius:16px; padding:16px 18px; box-shadow:0 6px 20px rgba(30,75,135,0.06);
         min-height:110px;
       }}
@@ -71,15 +71,20 @@ st.markdown(
       table.pl tr:last-child td {{ border-bottom:none }}
       .muted {{ color:#6B7280; font-size:12px }}
 
-      /* Radios */
+      /* Radios + Buttons */
       input[type="radio"] {{ accent-color:{BRAND_BLUE} !important; background:#FFFFFF !important; }}
       div[role="radiogroup"] * {{ color:{BRAND_TEXT} !important; }}
+      .stButton > button, .stDownloadButton > button {{
+        background:{BRAND_BLUE} !important; color:#fff !important; border-color:{BRAND_BLUE} !important;
+        font-weight:700; border-radius:10px; height:48px;
+      }}
 
       /* Keep inputs compact (no full-width stretch) */
-      .stTextInput, .stNumberInput {{ max-width: 320px !important; }}
+      .stTextInput, .stNumberInput {{ max-width: 340px !important; }}
 
-      /* Newer Streamlit input core */
+      /* Core input look */
       div[data-baseweb="input"] {{
+        position:relative !important;
         background:#FFFFFF !important;
         border:2px solid {BRAND_BLUE} !important;
         border-radius:12px !important;
@@ -87,40 +92,38 @@ st.markdown(
       div[data-baseweb="input"] input {{
         font-family:Poppins, sans-serif !important;
         font-size:22px !important; font-weight:700 !important; color:{BRAND_TEXT} !important;
-        height:56px !important; padding:10px 12px !important; text-align:right !important;
-        background:#FFFFFF !important; box-shadow:none !important;
+        height:56px !important; padding:10px 48px 10px 54px !important; /* space for prefix & suffix */
+        text-align:right !important; background:#FFFFFF !important; box-shadow:none !important;
       }}
 
-      /* Legacy wrappers */
+      /* Inline prefix “C$” on money inputs */
+      .money-wrap div[data-baseweb="input"]::before {{
+        content:"C$";
+        position:absolute; left:12px; top:50%; transform:translateY(-50%);
+        color:{BRAND_TEXT}; font-weight:700; font-family:Poppins, sans-serif;
+      }}
+
+      /* Inline suffix (unit) on money inputs */
+      .money-wrap[data-unit] div[data-baseweb="input"]::after {{
+        content:attr(data-unit);
+        position:absolute; right:12px; top:50%; transform:translateY(-50%);
+        color:{BRAND_TEXT}; font-weight:700; font-family:Poppins, sans-serif;
+      }}
+
+      /* Legacy wrappers fallback */
       .stTextInput>div>div>input, .stNumberInput>div>div>input {{
-        background:#FFFFFF !important; color:{BRAND_TEXT} !important;
-        font-family:Poppins, sans-serif !important; font-size:22px !important; font-weight:700 !important;
-        height:56px !important; padding:10px 12px !important; text-align:right !important;
-        border:2px solid {BRAND_BLUE} !important; border-radius:12px !important; box-shadow:none !important;
+        font-size:22px !important; font-weight:700 !important; height:56px !important;
+        text-align:right !important; font-family:Poppins, sans-serif !important;
+        border:2px solid {BRAND_BLUE} !important; border-radius:12px !important;
       }}
       input:invalid {{ border-color:{BRAND_BLUE} !important; box-shadow:none !important; }}
-
-      /* Unit chips that attach to inputs so users can't delete the symbols */
-      .chip {{
-        display:flex; align-items:center; justify-content:center;
-        height:56px; padding:0 10px; background:#F6FAFF; color:{BRAND_TEXT};
-        border:2px solid {BRAND_BLUE}; font-weight:700; font-family:Poppins, sans-serif;
-      }}
-      .chip-left  {{ border-right:0; border-radius:12px 0 0 12px; }}
-      .chip-right {{ border-left:0;  border-radius:0 12px 12px 0; }}
-
-      /* Buttons */
-      .stButton > button, .stDownloadButton > button {{
-        background:{BRAND_BLUE} !important; color:#fff !important; border-color:{BRAND_BLUE} !important;
-        font-weight:700; border-radius:10px; height:48px;
-      }}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Helpers (ADDED: money_input for C$ and unit chips)
+# Helpers (adds money input with inline C$ and unit inside the SAME box)
 # ──────────────────────────────────────────────────────────────────────────────
 def cad(x: float) -> str:
     x = float(x)
@@ -128,90 +131,50 @@ def cad(x: float) -> str:
 
 HST_RATE = 0.13  # fixed 13% (Ontario)
 
-def money_input(label: str, value: float, key: str, step: float = 1.0, suffix: str | None = None) -> float:
-    st.markdown(f"<div class='field-label'>{label}</div>", unsafe_allow_html=True)
-    col_l, col_mid, col_r = st.columns([0.18, 0.64, 0.18], vertical_alignment="center")
-    with col_l:
-        st.markdown("<div class='chip chip-left'>C$</div>", unsafe_allow_html=True)
-    with col_mid:
-        val = st.number_input(label="", key=key, value=float(value), step=step, format="%.2f", label_visibility="collapsed")
-    with col_r:
-        if suffix:
-            st.markdown(f"<div class='chip chip-right'>{suffix}</div>", unsafe_allow_html=True)
-        else:
-            st.markdown("<div></div>", unsafe_allow_html=True)
-    return float(val)
-
-def compute_metrics(
-    units: int,
-    fee_per_unit_month: float,
-    manager_salary_annual: float,
-    manager_days_per_week: int,  # 1..5
-    accounting_fees_annual: float,
-    head_office_annual: float,
-    fixed_overhead_annual: float,
-):
-    units = max(0, int(units))
-    # Revenue (pre-tax)
-    m_rev_sub = fee_per_unit_month * units
-    a_rev_sub = m_rev_sub * 12
-    # HST (pass-through)
-    m_hst, a_hst = m_rev_sub * HST_RATE, a_rev_sub * HST_RATE
-    m_rev_tot, a_rev_tot = m_rev_sub + m_hst, a_rev_sub + a_hst
-    # Expenses (manager salary prorated by days/5)
-    manager_alloc = manager_salary_annual * (manager_days_per_week / 5.0)
-    a_exp = manager_alloc + accounting_fees_annual + head_office_annual + fixed_overhead_annual
-    m_exp = a_exp / 12.0
-    # Profits (pre-tax revenue basis)
-    a_profit, m_profit = a_rev_sub - a_exp, m_rev_sub - m_exp
-    return {
-        "m_rev_sub": m_rev_sub, "a_rev_sub": a_rev_sub,
-        "m_hst": m_hst, "a_hst": a_hst,
-        "m_rev_tot": m_rev_tot, "a_rev_tot": a_rev_tot,
-        "manager_alloc": manager_alloc,
-        "a_exp": a_exp, "m_exp": m_exp,
-        "a_profit": a_profit, "m_profit": m_profit,
-    }
-
-def required_fee_for_margin(
-    target_margin_pct: float,
-    units: int,
-    manager_salary_annual: float,
-    manager_days_per_week: int,
-    accounting_fees_annual: float,
-    head_office_annual: float,
-    fixed_overhead_annual: float,
-):
-    if units <= 0:
-        return float("inf")
-    manager_alloc = manager_salary_annual * (manager_days_per_week / 5.0)
-    a_exp = manager_alloc + accounting_fees_annual + head_office_annual + fixed_overhead_annual
-    m = max(0.0, min(0.95, target_margin_pct / 100.0))
-    if 1.0 - m == 0:
-        return float("inf")
-    req_a_rev = a_exp / (1.0 - m)               # pre-tax revenue needed
-    fee = req_a_rev / (units * 12.0)            # $/unit/month
-    return fee
-
-def margin_from_fee(
-    fee_per_unit_month: float,
-    units: int,
-    manager_salary_annual: float,
-    manager_days_per_week: int,
-    accounting_fees_annual: float,
-    head_office_annual: float,
-    fixed_overhead_annual: float,
-):
-    if units <= 0:
+def _money_text_to_float(s: str) -> float:
+    """Parse values like 'C$ 12,345.67' back to float safely."""
+    if not s:
         return 0.0
-    a_rev_sub = fee_per_unit_month * units * 12.0
-    manager_alloc = manager_salary_annual * (manager_days_per_week / 5.0)
-    a_exp = manager_alloc + accounting_fees_annual + head_office_annual + fixed_overhead_annual
-    a_profit = a_rev_sub - a_exp
-    return 0.0 if a_rev_sub == 0 else (a_profit / a_rev_sub) * 100.0
+    s = s.strip()
+    if s.startswith("C$"):
+        s = s[2:].strip()
+    s = s.replace(",", "")
+    try:
+        return float(s)
+    except Exception:
+        return 0.0
+
+def money_input(label: str, value: float, key: str, unit_suffix: str | None = None, step: float = 1.0) -> float:
+    """
+    One-box money input:
+      - Shows 'C$' on the left INSIDE the box (not removable)
+      - Optional unit on the right (e.g., '/year' or '/unit/month')
+      - User types the number only; we maintain prefix/suffix via CSS
+    """
+    st.markdown(f"<div class='field-label'>{label}</div>", unsafe_allow_html=True)
+    # Wrap the widget in a div with class 'money-wrap' so CSS adds C$ and unit inside
+    wrap = st.container()
+    with wrap:
+        # Emit the wrapper with optional data-unit attr
+        unit_attr = f" data-unit=\"{unit_suffix}\"" if unit_suffix else ""
+        st.markdown(f"<div class='money-wrap'{unit_attr}>", unsafe_allow_html=True)
+        # Use text_input so we fully control formatting; step arrows aren't needed for money
+        current = st.session_state.get(key, f"{value:,.2f}")
+        txt = st.text_input(
+            label="",
+            key=key + "_txt",
+            value=current,
+            label_visibility="collapsed",
+            help="Enter amount; 'C$' and unit are fixed.",
+        )
+        # Normalize: keep only the numeric; we re-show formatted
+        num = _money_text_to_float(txt)
+        st.session_state[key] = f"{num:,.2f}"
+        st.markdown("</div>", unsafe_allow_html=True)
+    return float(num)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Header (logo + title) — robust lookup (CHANGED)
+# Header (logo + title) — robust lookup
 # ──────────────────────────────────────────────────────────────────────────────
 from pathlib import Path
 BASE = Path(__file__).resolve().parent
@@ -245,6 +208,7 @@ with c1:
 with c2:
     property_address = st.text_input("Address", "123 Example St, City, Province")
 
+# Keep non-money small
 units = st.number_input("Residential units", min_value=0, step=1, value=100)
 
 st.markdown("<div class='field-label'>Primary input mode</div>", unsafe_allow_html=True)
@@ -259,28 +223,23 @@ if "Target Margin" in mode:
     target_margin = st.number_input("Target profit margin (%)", min_value=0.0, max_value=95.0, step=0.5, format="%.2f", value=20.0)
     fee_input = None
 else:
-    # CHANGED: fee uses money_input with chips (C$ and /unit/month)
-    fee_input = money_input("Management fee (pre-tax)", 75.0, key="fee_input", step=5.0, suffix="/unit/month")
+    fee_input = money_input("Management fee (pre-tax)", 75.0, key="fee_input", unit_suffix="/unit/month", step=5.0)
     target_margin = None
 
 st.markdown("**Manager & Overhead (annual)**")
 g1, g2 = st.columns(2)
 with g1:
-    # CHANGED to money_input
-    manager_salary = money_input("Manager salary (annual)", 90000.0, key="mgr_salary", step=1000.0, suffix="/year")
+    manager_salary = money_input("Manager salary (annual)", 90000.0, key="mgr_salary", unit_suffix="/year", step=1000.0)
 with g2:
     manager_days = st.number_input("Manager days on-site per week (1–5)", min_value=1, max_value=5, step=1, value=2)
 
 h1, h2 = st.columns(2)
 with h1:
-    # CHANGED to money_input
-    accounting = money_input("Accounting fees (annual)", 12000.0, key="acct_fees", step=500.0, suffix="/year")
+    accounting = money_input("Accounting fees (annual)", 12000.0, key="acct_fees", unit_suffix="/year", step=500.0)
 with h2:
-    # CHANGED to money_input
-    head_office = money_input("Head office team time (annual)", 18000.0, key="ho_time", step=500.0, suffix="/year")
+    head_office = money_input("Head office team time (annual)", 18000.0, key="ho_time", unit_suffix="/year", step=500.0)
 
-# CHANGED to money_input
-fixed_overhead = money_input("Fixed overhead (annual)", 30000.0, key="fixed_oh", step=500.0, suffix="/year")
+fixed_overhead = money_input("Fixed overhead (annual)", 30000.0, key="fixed_oh", unit_suffix="/year", step=500.0)
 
 st.markdown("**Projection Controls**")
 proj1, proj2 = st.columns(2)
@@ -292,30 +251,68 @@ with proj2:
 st.button("Apply Changes", use_container_width=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Compute based on mode
+# Compute based on mode (unchanged core math)
 # ──────────────────────────────────────────────────────────────────────────────
+def compute_metrics(
+    units: int,
+    fee_per_unit_month: float,
+    manager_salary_annual: float,
+    manager_days_per_week: int,  # 1..5
+    accounting_fees_annual: float,
+    head_office_annual: float,
+    fixed_overhead_annual: float,
+):
+    units = max(0, int(units))
+    m_rev_sub = fee_per_unit_month * units
+    a_rev_sub = m_rev_sub * 12
+    m_hst, a_hst = m_rev_sub * HST_RATE, a_rev_sub * HST_RATE
+    m_rev_tot, a_rev_tot = m_rev_sub + m_hst, a_rev_sub + a_hst
+    manager_alloc = manager_salary_annual * (manager_days_per_week / 5.0)
+    a_exp = manager_alloc + accounting_fees_annual + head_office_annual + fixed_overhead_annual
+    m_exp = a_exp / 12.0
+    a_profit, m_profit = a_rev_sub - a_exp, m_rev_sub - m_exp
+    return {
+        "m_rev_sub": m_rev_sub, "a_rev_sub": a_rev_sub,
+        "m_hst": m_hst, "a_hst": a_hst,
+        "m_rev_tot": m_rev_tot, "a_rev_tot": a_rev_tot,
+        "manager_alloc": manager_alloc,
+        "a_exp": a_exp, "m_exp": m_exp,
+        "a_profit": a_profit, "m_profit": m_profit,
+    }
+
+def required_fee_for_margin(target_margin_pct, units, manager_salary_annual, manager_days_per_week, accounting_fees_annual, head_office_annual, fixed_overhead_annual):
+    if units <= 0:
+        return float("inf")
+    manager_alloc = manager_salary_annual * (manager_days_per_week / 5.0)
+    a_exp = manager_alloc + accounting_fees_annual + head_office_annual + fixed_overhead_annual
+    m = max(0.0, min(0.95, target_margin_pct / 100.0))
+    if 1.0 - m == 0:
+        return float("inf")
+    req_a_rev = a_exp / (1.0 - m)
+    return req_a_rev / (units * 12.0)
+
+def margin_from_fee(fee_per_unit_month, units, manager_salary_annual, manager_days_per_week, accounting_fees_annual, head_office_annual, fixed_overhead_annual):
+    if units <= 0:
+        return 0.0
+    a_rev_sub = fee_per_unit_month * units * 12.0
+    manager_alloc = manager_salary_annual * (manager_days_per_week / 5.0)
+    a_exp = manager_alloc + accounting_fees_annual + head_office_annual + fixed_overhead_annual
+    a_profit = a_rev_sub - a_exp
+    return 0.0 if a_rev_sub == 0 else (a_profit / a_rev_sub) * 100.0
+
 if "Target Margin" in mode:
     fee = required_fee_for_margin(target_margin, units, manager_salary, manager_days, accounting, head_office, fixed_overhead)
     margin = target_margin
 else:
-    fee = float(fee_input or 0.0)
+    fee = float(_money_text_to_float(st.session_state.get("fee_input", "0")))
     margin = margin_from_fee(fee, units, manager_salary, manager_days, accounting, head_office, fixed_overhead)
 
 M = compute_metrics(units, fee, manager_salary, manager_days, accounting, head_office, fixed_overhead)
 
-# Break-even fee (0% margin)
-break_even_fee = required_fee_for_margin(
-    target_margin_pct=0.0,
-    units=units,
-    manager_salary_annual=manager_salary,
-    manager_days_per_week=manager_days,
-    accounting_fees_annual=accounting,
-    head_office_annual=head_office,
-    fixed_overhead_annual=fixed_overhead,
-)
+break_even_fee = required_fee_for_margin(0.0, units, manager_salary, manager_days, accounting, head_office, fixed_overhead)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# KPI row (big numbers)
+# Outputs (KPI row)
 # ──────────────────────────────────────────────────────────────────────────────
 st.markdown("<div class='section-title'>Outputs</div>", unsafe_allow_html=True)
 k1, k2, k3 = st.columns([1, 1, 2])
@@ -339,8 +336,9 @@ with k3:
 # ──────────────────────────────────────────────────────────────────────────────
 # Charts — Expense doughnut + Profit projection bar
 # ──────────────────────────────────────────────────────────────────────────────
-cA, cB = st.columns(2)
+import plotly.graph_objects as go
 
+cA, cB = st.columns(2)
 with cA:
     labels = ["Manager (allocated)", "Fixed overhead", "Head office", "Accounting"]
     vals = [M["manager_alloc"], fixed_overhead, head_office, accounting]
@@ -414,14 +412,19 @@ if M["a_profit"] < 0:
     st.error("Negative margin detected. Increase fee or reduce costs.")
 
 # ──────────────────────────────────────────────────────────────────────────────
-# PDF Export (ReportLab) – one page with logo, KPIs, table, and charts (TIGHTER LAYOUT)
+# PDF Export (ReportLab) – one page with logo, KPIs, table, and charts (aligned)
 # ──────────────────────────────────────────────────────────────────────────────
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.utils import ImageReader
+from reportlab.lib import colors
+from io import BytesIO
+
 def fig_to_png_bytes(fig) -> bytes:
     # Requires kaleido
     return fig.to_image(format="png", scale=2, engine="kaleido")
 
 def build_pdf() -> bytes:
-    # Render charts to PNG
     pie_png = fig_to_png_bytes(pie)
     bar_png = fig_to_png_bytes(bar)
 
@@ -444,7 +447,6 @@ def build_pdf() -> bytes:
     c.setFillColor(colors.HexColor("#6B7280"))
     c.drawString(margin + 140, y-34, f"{property_name} — {property_address} — {datetime.now():%Y-%m-%d}")
 
-    # Blue divider
     c.setFillColor(colors.HexColor(BRAND_BLUE))
     c.rect(margin, y-50, W - 2*margin, 3, stroke=0, fill=1)
 
@@ -471,8 +473,8 @@ def build_pdf() -> bytes:
 
     ty = y-158
     col1 = margin
-    col2 = margin + 300  # Monthly
-    col3 = margin + 450  # Annual
+    col2 = margin + 300
+    col3 = margin + 450
 
     c.setFont("Helvetica-Bold", 9)
     c.drawString(col1, ty, "Line item")
@@ -494,7 +496,7 @@ def build_pdf() -> bytes:
         if ty < 220:
             break
 
-    # Charts row (aligned under table)
+    # Charts row
     chart_h = 170
     chart_w = (W - 2*margin - 12) / 2
     y_charts = 80
@@ -507,7 +509,6 @@ def build_pdf() -> bytes:
     except Exception:
         pass
 
-    # Footer
     c.setFont("Helvetica", 8); c.setFillColor(colors.HexColor("#6B7280"))
     c.drawString(margin, 60, "HST fixed at 13% (Ontario). HST is pass-through and excluded from profit/margin.")
     c.drawRightString(W - margin, 60, "ALBA Property Management")
