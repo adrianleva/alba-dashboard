@@ -119,6 +119,20 @@ st.markdown(
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
+def money_input(label: str, value: float, key: str, step: float = 1.0, suffix: str | None = None) -> float:
+    """Renders a compact input with a left 'C$' chip and optional right unit chip."""
+    st.markdown(f"<div class='field-label'>{label}</div>", unsafe_allow_html=True)
+    col_l, col_mid, col_r = st.columns([0.18, 0.64, 0.18], vertical_alignment="center")
+    with col_l:
+        st.markdown("<div class='chip chip-left'>C$</div>", unsafe_allow_html=True)
+    with col_mid:
+        val = st.number_input(label="", key=key, value=float(value), step=step, format="%.2f", label_visibility="collapsed")
+    with col_r:
+        if suffix:
+            st.markdown(f"<div class='chip chip-right'>{suffix}</div>", unsafe_allow_html=True)
+        else:
+            st.markdown("<div></div>", unsafe_allow_html=True)
+    return float(val)
 def cad(x: float) -> str:
     x = float(x)
     return f"-C${abs(x):,.2f}" if x < 0 else f"C${x:,.2f}"
