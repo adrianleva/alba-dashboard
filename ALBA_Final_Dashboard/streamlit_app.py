@@ -70,11 +70,11 @@ st.markdown(
       .stTextInput>div>div>input, .stNumberInput>div>div>input {{
         background:#fff !important; color:{BRAND_TEXT} !important;
       }}
-      .field-label {
+      .field-label {{
     color: #1E4B87;
     font-weight: 700;
     margin: 6px 0 4px;
-}
+}}
     </style>
     """,
     unsafe_allow_html=True,
