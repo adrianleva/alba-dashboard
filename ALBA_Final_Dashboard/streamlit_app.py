@@ -153,16 +153,35 @@ def margin_from_fee(
     return 0.0 if a_rev_sub == 0 else (a_profit / a_rev_sub) * 100.0
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Header (logo + title)
+# Header (logo + title)  — robust logo lookup
 # ──────────────────────────────────────────────────────────────────────────────
-logo_path = os.path.join("assets", "logo.png")
+from pathlib import Path
+
+BASE = Path(__file__).resolve().parent
+# Try a few common names/locations (works whether app is at repo root or in a subfolder)
+logo_candidates = [
+    BASE / "assets" / "logo.png",
+    BASE / "assets" / "Logo.png",
+    BASE / "assets" / "alba_logo.png",
+    BASE / "assets" / "download.png",  # <- likely the one you already uploaded
+    Path("assets/logo.png"),
+    Path("assets/download.png"),
+]
+
+logo_path = next((p for p in logo_candidates if p.exists()), None)
+
 lcol, rcol = st.columns([3, 1], vertical_alignment="center")
 with lcol:
     st.markdown("<div class='brand-title'>ALBA Pricing & Profit Planner</div>", unsafe_allow_html=True)
     st.markdown("<div class='brand-bar'></div>", unsafe_allow_html=True)
 with rcol:
-    if os.path.exists(logo_path):
-        st.image(logo_path, use_column_width=True)
+    if logo_path:
+        st.image(str(logo_path), use_column_width=True)
+    else:
+        # Helpful message + quick listing so we can see what’s in /assets
+        assets_dir = (BASE / "assets")
+        listing = ", ".join([p.name for p in assets_dir.glob("*")]) if assets_dir.exists() else "no assets folder found"
+        st.warning(f"Logo not found. Place a file in /assets named logo.png (or download.png). Found: {listing}")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Inputs
