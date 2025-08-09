@@ -245,8 +245,7 @@ if "Target Margin" in mode:
     target_margin = st.number_input("Target profit margin (%)", min_value=0.0, max_value=95.0, step=0.5, format="%.2f", value=20.0)
     fee_input = None
 else:
-    fee_input = st.number_input("Management fee $/unit/month (pre-tax)", min_value=0.0, step=5.0, format="%.2f", value=75.0)
-    target_margin = None
+fee_input = money_input("Management fee (pre-tax)", 75.0, key="fee_input", step=5.0, suffix="/unit/month")    target_margin = None
 
 st.markdown("**Manager & Overhead (annual)**")
 g1, g2 = st.columns(2)
