@@ -74,6 +74,11 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+.field-label {
+    color: #1E4B87;
+    font-weight: 700;
+    margin: 6px 0 4px;
+}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers
